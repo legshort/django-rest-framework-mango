@@ -3,7 +3,7 @@
 A set of viewset mixin for the [Django REST Framework.](https://www.django-rest-framework.org/)
 
 ## Installation
-`pip install djangorestframework-mango`
+`pip install djangorestframework_mango`
 
 ## Usage
 
