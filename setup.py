@@ -12,7 +12,7 @@ setup(name='djangorestframework_mango',
           'Programming Language :: Python :: 3',
       ],
       keywords=['djangorestframework', 'drf', 'util', 'viewset'],
-      packages=['django-rest-framework-mango'],
+      packages=['django_rest_framework_mango'],
       long_description=open('README.md').read(),
       install_requires=[
           'django',
