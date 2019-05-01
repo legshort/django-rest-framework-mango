@@ -1,6 +1,6 @@
 from setuptools import setup
 
-setup(name='django-rest-framework-mango',
+setup(name='djangorestframework_mango',
       version='0.1',
       url='https://github.com/legshort/django-rest-framework-mango/',
       license='MIT',
