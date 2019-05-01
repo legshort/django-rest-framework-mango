@@ -1,13 +1,13 @@
-#Django Rest Framework Mango
+# Django Rest Framework Mango
 
 A set of viewset mixin for the [Django REST Framework.](https://www.django-rest-framework.org/)
 
-##Installation
+## Installation
 `pip install djangorestframework-mango`
 
-##Usage
+## Usage
 
-###ActionMixin
+### ActionMixin
 It has six action methods that can be use instead of compare action with str
 - `is_create_action()`
 - `is_retrieve_action()`
@@ -48,7 +48,7 @@ class ViewSet(ActionMixin, viewsets.GenericViewSet):
         return queryset 
 ```
 
-###QuerysetMixin
+### QuerysetMixin
 It find action base queryset method and run it
 
 ```python
@@ -96,7 +96,7 @@ class ViewSet(QuerysetMixin, viewsets.GenericViewSet):
         return Response(serializer.data)
 ```
 
-###SerializerMixin
+### SerializerMixin
 You can define multi serializers by action
 
 ```python
@@ -121,7 +121,7 @@ class ViewSet(QuerysetMixin, viewsets.GenericViewSet):
         return Response(serializer.data)
 ```
 
-###PermissionMixin
+### PermissionMixin
 You can define multi permissions by action
 
 ```python
@@ -146,7 +146,7 @@ class ViewSet(QuerysetMixin, viewsets.GenericViewSet):
         return Response(serializer.data)
 ```
 
-###SessionMiddleware
+### SessionMiddleware
 You can use session data within request life cycle.
 - add SessionMiddleware
 - use session from view, serializer and model
