@@ -13,8 +13,8 @@ setup(name='djangorestframework_mango',
       ],
       keywords=['djangorestframework', 'drf', 'util', 'viewset'],
       packages=['django_rest_framework_mango'],
-      long_description=open('README.md').read(),
+      long_description=open('README.rst').read(),
       install_requires=[
           'django',
-          'djangorestframework', ]
+          'djangorestframework',]
       )
