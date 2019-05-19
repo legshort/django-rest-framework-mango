@@ -8,7 +8,7 @@ class SessionMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        self._init_session(request)
+        self._init_session()
 
         response = self.get_response(request)
 
@@ -16,8 +16,8 @@ class SessionMiddleware:
 
         return response
 
-    def _init_session(self, request):
-        self._sessions[threading.current_thread()] = request
+    def _init_session(self, ):
+        self._sessions[threading.current_thread()] = {}
 
     def _remove_session(self):
         self._sessions.pop(threading.current_thread(), None)
