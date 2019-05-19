@@ -16,7 +16,7 @@ class SessionMiddleware:
 
         return response
 
-    def _init_session(self, ):
+    def _init_session(self):
         self._sessions[threading.current_thread()] = {}
 
     def _remove_session(self):
