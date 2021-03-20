@@ -116,7 +116,10 @@ You can define multi serializers by action
         queryset = Model.objects.all()
         serializer_class = ModelSerializer
         serializer_class_by_actions = {
-            'create': ModelCreateSerializer,
+            'create': {
+                'v1': ModelCreateSerializerV1,
+                'v2': ModelCreateSerializerV2,
+                },
             'list': ModelListSerializer,
             'retrieve': ModelRetrieveSerializer,
             'update': ModelUpdateSerializer,
