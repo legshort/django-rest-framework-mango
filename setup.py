@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='djangorestframework_mango',
-      version='0.1.1',
+      version='0.2.0',
       url='https://github.com/legshort/django-rest-framework-mango/',
       license='MIT',
       author='Jun Young Lee',
