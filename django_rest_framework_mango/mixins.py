@@ -44,8 +44,10 @@ class QuerysetMixin(ActionMixin):
 class SerializerMixin:
     def get_serializer_class(self):
         if hasattr(self, 'serializer_class_by_actions'):
-            return self.serializer_class_by_actions.get(self.action, self.serializer_class)
-
+            serializer_class = self.serializer_class_by_actions.get(self.action, self.serializer_class)
+            if isinstance(serializer_class, dict):
+                return serializer_class.get(self.request.version)
+            return serializer_class
         return self.serializer_class
 
 
