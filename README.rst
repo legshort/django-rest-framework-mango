@@ -24,7 +24,19 @@ Installation
 Usage
 -----
 
+Every example below is annotated and type-checks under mypy with
+``django-stubs`` and ``djangorestframework-stubs``. The queryset hooks are
+looked up by name at runtime, so annotating them is what gets them checked
+— see `Typing your hooks`_.
+
 .. code:: python
+
+    from django.db import models
+    from django.db.models import QuerySet
+    from rest_framework import viewsets
+    from rest_framework.decorators import action
+    from rest_framework.request import Request
+    from rest_framework.response import Response
 
     from django_rest_framework_mango.middlewares import SessionMiddleware
     from django_rest_framework_mango.mixins import (
@@ -53,18 +65,15 @@ It has six action methods that can be used instead of comparing ``self.action``.
         queryset = Model.objects.all()
         serializer_class = ModelSerializer
 
-        def get_queryset(self):
+        def get_queryset(self) -> QuerySet[Model]:
             queryset = super().get_queryset()
 
             if self.is_create_action():
-                # change queryset for create
-                queryset = queryset.change_for_create()
+                queryset = queryset.select_related('owner')
             elif self.is_retrieve_action():
-                # change queryset for retrieve
-                queryset = queryset.change_for_retrieve()
+                queryset = queryset.select_related('owner', 'category')
             elif self.is_list_action():
-                # change queryset for list
-                queryset = queryset.change_for_list()
+                queryset = queryset.filter(is_public=True)
 
             return queryset
 
@@ -82,27 +91,28 @@ leave the queryset untouched.
         serializer_class = ModelSerializer
 
         # this method runs automatically when this viewset gets the create action
-        def create_queryset(self, queryset):
-            return queryset.change_for_create()
+        def create_queryset(self, queryset: QuerySet[Model]) -> QuerySet[Model]:
+            return queryset.select_related('owner')
 
         # this method runs automatically when this viewset gets the list action
-        def list_queryset(self, queryset):
-            return queryset.change_for_list()
+        def list_queryset(self, queryset: QuerySet[Model]) -> QuerySet[Model]:
+            return queryset.filter(is_public=True)
 
         # this method runs automatically when this viewset gets the partial update action
-        def partial_update_queryset(self, queryset):
-            return queryset.change_for_partial_update()
+        def partial_update_queryset(self, queryset: QuerySet[Model]) -> QuerySet[Model]:
+            # .pk, not the user object: request.user is User | AnonymousUser
+            return queryset.filter(owner=self.request.user.pk)
 
         # this method runs automatically when this viewset gets the update_extra_profile action
-        def update_extra_profile_queryset(self, queryset):
-            return queryset.change_for_update_extra_profile()
+        def update_extra_profile_queryset(self, queryset: QuerySet[Model]) -> QuerySet[Model]:
+            return queryset.select_related('profile')
 
         @action(methods=['POST'], detail=True)
-        def update_extra_profile(self, request, pk=None):
+        def update_extra_profile(self, request: Request, pk: str | None = None) -> Response:
             # this method calls update_extra_profile_queryset() internally
             queryset = self.get_queryset()
 
-            return Response(serializer.data)
+            return Response({'count': queryset.count()})
 
 SerializerMixin
 ~~~~~~~~~~~~~~~
@@ -129,11 +139,14 @@ to ``serializer_class``.
         }
 
         @action(methods=['POST'], detail=True)
-        def update_extra_profile(self, request, pk=None):
+        def update_extra_profile(self, request: Request, pk: str | None = None) -> Response:
             # self.get_serializer returns ModelUpdateExtraProfileSerializer
             serializer = self.get_serializer()
 
             return Response(serializer.data)
+
+``serializer_class_by_actions`` needs no annotation of its own — the
+mixin declares its type, so a plain assignment is still checked.
 
 A nested dict maps by API version, so it requires a `versioning scheme
 <https://www.django-rest-framework.org/api-guide/versioning/>`__ to be
@@ -161,7 +174,7 @@ to ``permission_classes``.
         }
 
         @action(methods=['POST'], detail=True)
-        def update_extra_profile(self, request, pk=None):
+        def update_extra_profile(self, request: Request, pk: str | None = None) -> Response:
             # this method requires Owner permission
             serializer = self.get_serializer()
 
@@ -180,8 +193,8 @@ MangoMixin
         serializer_class_by_actions = {'list': ModelListSerializer}
         permission_by_actions = {'destroy': [Owner]}
 
-        def list_queryset(self, queryset):
-            return queryset.change_for_list()
+        def list_queryset(self, queryset: QuerySet[Model]) -> QuerySet[Model]:
+            return queryset.filter(is_public=True)
 
 SessionMiddleware
 ~~~~~~~~~~~~~~~~~
@@ -204,19 +217,55 @@ when the request finishes, even if the view raises.
         queryset = Model.objects.all()
         serializer_class = ModelSerializer
 
-        def list_queryset(self, queryset):
-            SessionMiddleware.get_session()['current_user'] = self.request.user
+        def list_queryset(self, queryset: QuerySet[Model]) -> QuerySet[Model]:
+            session = SessionMiddleware.get_session()
+            if session is not None:
+                session['current_user_id'] = self.request.user.pk
 
             return queryset
 
     class Model(models.Model):
 
         @property
-        def current_user(self):
+        def current_user_id(self) -> int | None:
             # the model cannot reach the request, so it reads what the view stored
             session = SessionMiddleware.get_session() or {}
+            current_user_id: int | None = session.get('current_user_id')
 
-            return session.get('current_user')
+            return current_user_id
+
+``get_session()`` returns ``None`` outside a request, so it is
+``dict[str, Any] | None``. Narrow it before writing, as above.
+
+Typing your hooks
+-----------------
+
+The package ships ``py.typed``, so ``get_queryset``, ``get_serializer_class``
+and ``get_permissions`` are typed for you, and the two mapping attributes are
+checked against the types the mixins declare:
+
+.. code:: python
+
+    serializer_class_by_actions: ClassVar[dict[str, SerializerClass | dict[str, SerializerClass]]]
+    permission_by_actions: ClassVar[dict[str, Sequence[_PermissionClass]]]
+
+The ``<action>_queryset`` hooks are different. ``QuerysetMixin`` looks them
+up by name at runtime, so no signature is imposed on them and an unannotated
+hook is simply unchecked. Annotate them yourself to get them checked:
+
+.. code:: python
+
+    def list_queryset(self, queryset: QuerySet[Model]) -> QuerySet[Model]:
+        return queryset.filter(is_public=True)
+
+Type checking a viewset that has models needs the `django-stubs
+<https://github.com/typeddjango/django-stubs>`__ mypy plugin, which is what
+resolves ``Model.objects`` and ``QuerySet[Model]``.
+
+The examples leave ``viewsets.GenericViewSet`` unparameterized, matching
+DRF's own documentation. Under ``mypy --strict`` that trips
+``disallow_any_generics``; write ``viewsets.GenericViewSet[Model]`` instead,
+which DRF supports at runtime through its own ``__class_getitem__``.
 
 Development
 -----------
