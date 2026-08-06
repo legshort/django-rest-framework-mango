@@ -1,27 +1,27 @@
+from __future__ import annotations
+
 import threading
+from typing import TYPE_CHECKING, Any, Callable, ClassVar
+
+if TYPE_CHECKING:
+    from django.http import HttpRequest, HttpResponseBase
 
 
 class SessionMiddleware:
-    _sessions = {}
+    # ponytail: threading.local() is exactly this feature, no dict keyed by Thread to reap.
+    _local: ClassVar[threading.local] = threading.local()
 
-    def __init__(self, get_response):
+    def __init__(self, get_response: Callable[[HttpRequest], HttpResponseBase]) -> None:
         self.get_response = get_response
 
-    def __call__(self, request):
-        self._init_session()
+    def __call__(self, request: HttpRequest) -> HttpResponseBase:
+        self._local.session = {}
 
-        response = self.get_response(request)
-
-        self._remove_session()
-
-        return response
-
-    def _init_session(self):
-        self._sessions[threading.current_thread()] = {}
-
-    def _remove_session(self):
-        self._sessions.pop(threading.current_thread(), None)
+        try:
+            return self.get_response(request)
+        finally:
+            self._local.session = None
 
     @classmethod
-    def get_session(cls):
-        return cls._sessions.get(threading.current_thread())
+    def get_session(cls) -> dict[str, Any] | None:
+        return getattr(cls._local, 'session', None)
