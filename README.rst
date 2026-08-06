@@ -1,13 +1,25 @@
 Django Rest Framework Mango
 ===========================
 
-A set of viewset mixin for the `Django REST
+A set of viewset mixins for the `Django REST
 Framework. <https://www.django-rest-framework.org/>`__
+
+Fully type hinted — the package ships ``py.typed``, so your type checker
+sees the mixin signatures.
+
+Supported versions
+------------------
+
+============== =========================
+Python         3.10, 3.11, 3.12, 3.13, 3.14
+Django         5.2, 6.0
+DRF            3.16+
+============== =========================
 
 Installation
 ------------
 
-``pip install djangorestframework_mango``
+``pip install djangorestframework-mango``
 
 Usage
 -----
@@ -15,7 +27,7 @@ Usage
 ActionMixin
 ~~~~~~~~~~~
 
-It has six action methods that can be use instead of compare action with.
+It has six action methods that can be used instead of comparing ``self.action``.
 
 - is_create_action()
 - is_retrieve_action()
@@ -30,11 +42,10 @@ It has six action methods that can be use instead of compare action with.
         queryset = Model.objects.all()
         serializer_class = ModelSerializer
 
-
         def get_queryset(self):
             queryset = super().get_queryset()
 
-            if self.is_create_action:
+            if self.is_create_action():
                 # change queryset for create
                 queryset = queryset.change_for_create()
             elif self.is_retrieve_action():
@@ -43,22 +54,15 @@ It has six action methods that can be use instead of compare action with.
             elif self.is_list_action():
                 # change queryset for list
                 queryset = queryset.change_for_list()
-            elif self.is_update_action():
-                # change queryset for update
-                queryset = queryset.change_for_update()
-            elif self.is_partial_update_action():
-                # change queryset for partial update
-                queryset = queryset.change_for_partial_update()
-            elif self.is_destroy_action():
-                # change queryset for destroy
-                queryset = queryset.change_for_destroy()
 
             return queryset
 
 QuerysetMixin
 ~~~~~~~~~~~~~
 
-It find action base queryset method and run it
+It finds the ``<action>_queryset`` method and runs it. Any action works,
+including custom ``@action`` methods. Actions without a matching method
+leave the queryset untouched.
 
 .. code:: python
 
@@ -66,39 +70,23 @@ It find action base queryset method and run it
         queryset = Model.objects.all()
         serializer_class = ModelSerializer
 
-        # this method run automatically when this viewset gets create action
+        # this method runs automatically when this viewset gets the create action
         def create_queryset(self, queryset):
-            queryset = queryset.change_for_create()
-            return queryset
+            return queryset.change_for_create()
 
-        # this method run automatically when this viewset gets list action
+        # this method runs automatically when this viewset gets the list action
         def list_queryset(self, queryset):
-            queryset = queryset.change_for_list()
-            return queryset
+            return queryset.change_for_list()
 
-        # this method run automatically when this viewset gets retrieve action
-        def retrieve_queryset(self, queryset):
-            queryset = queryset.change_for_retrieve()
-            return queryset
-        # this method run automatically when this viewset gets update action
-        def update_queryset(self, queryset):
-            queryset = queryset.change_for_update()
-            return queryset
-        # this method run automatically when this viewset gets partial update action
-        def partil_update_queryset(self, queryset):
-            queryset = queryset.change_for_partial_update()
-            return queryset
-        # this method run automatically when this viewset gets destroy action
-        def destroy_queryset(self, queryset):
-            queryset = queryset.change_for_delete()
-            return queryset
+        # this method runs automatically when this viewset gets the partial update action
+        def partial_update_queryset(self, queryset):
+            return queryset.change_for_partial_update()
 
-        # this method run automatically when this viewset gets update_extra_profile action
+        # this method runs automatically when this viewset gets the update_extra_profile action
         def update_extra_profile_queryset(self, queryset):
-            queryset = queryset.change_for_update_extra_profile()
-            return queryset
+            return queryset.change_for_update_extra_profile()
 
-        @action(methods['POST'], detail=True)
+        @action(methods=['POST'], detail=True)
         def update_extra_profile(self, request, pk=None):
             # this method calls update_extra_profile_queryset() internally
             queryset = self.get_queryset()
@@ -108,85 +96,129 @@ It find action base queryset method and run it
 SerializerMixin
 ~~~~~~~~~~~~~~~
 
-You can define multi serializers by action
+You can define multiple serializers by action. Unmapped actions fall back
+to ``serializer_class``.
 
 .. code:: python
 
-    class ViewSet(QuerysetMixin, viewsets.GenericViewSet):
+    class ViewSet(SerializerMixin, viewsets.GenericViewSet):
         queryset = Model.objects.all()
         serializer_class = ModelSerializer
         serializer_class_by_actions = {
             'create': {
                 'v1': ModelCreateSerializerV1,
                 'v2': ModelCreateSerializerV2,
-                },
+            },
             'list': ModelListSerializer,
             'retrieve': ModelRetrieveSerializer,
             'update': ModelUpdateSerializer,
-            'partial_update': ModelParitlaUpdateSerializer,
-            'destory': ModelDestorySerializer,
+            'partial_update': ModelPartialUpdateSerializer,
+            'destroy': ModelDestroySerializer,
             'update_extra_profile': ModelUpdateExtraProfileSerializer,
         }
 
-        @action(methods['POST'], detail=True)
+        @action(methods=['POST'], detail=True)
         def update_extra_profile(self, request, pk=None):
             # self.get_serializer returns ModelUpdateExtraProfileSerializer
             serializer = self.get_serializer()
 
             return Response(serializer.data)
 
+A nested dict maps by API version, so it requires a `versioning scheme
+<https://www.django-rest-framework.org/api-guide/versioning/>`__ to be
+configured — otherwise ``ImproperlyConfigured`` is raised.
+
 PermissionMixin
 ~~~~~~~~~~~~~~~
 
-You can define multi permissions by action
+You can define multiple permissions by action. Unmapped actions fall back
+to ``permission_classes``.
 
 .. code:: python
 
-    class ViewSet(QuerysetMixin, viewsets.GenericViewSet):
+    class ViewSet(PermissionMixin, viewsets.GenericViewSet):
         queryset = Model.objects.all()
         serializer_class = ModelSerializer
         permission_by_actions = {
-            'create': [Authenticated],
+            'create': [IsAuthenticated],
             'list': [ReadOnly],
             'retrieve': [AllowAny],
             'update': [Owner],
             'partial_update': [Owner],
-            'destory': [Owner],
+            'destroy': [Owner],
             'update_extra_profile': [Owner],
         }
 
-        @action(methods['POST'], detail=True)
+        @action(methods=['POST'], detail=True)
         def update_extra_profile(self, request, pk=None):
             # this method requires Owner permission
             serializer = self.get_serializer()
 
             return Response(serializer.data)
 
-SessionMiddleware
-~~~~~~~~~~~~~~~~~
+MangoMixin
+~~~~~~~~~~
 
-You can use session data within request life cycle. - add
-SessionMiddleware - use session from view, serializer and model
+``QuerysetMixin``, ``SerializerMixin`` and ``PermissionMixin`` combined.
 
 .. code:: python
 
-    class ViewSet(viewsets.GenericViewSet):
+    class ViewSet(MangoMixin, viewsets.GenericViewSet):
+        queryset = Model.objects.all()
+        serializer_class = ModelSerializer
+        serializer_class_by_actions = {'list': ModelListSerializer}
+        permission_by_actions = {'destroy': [Owner]}
+
+        def list_queryset(self, queryset):
+            return queryset.change_for_list()
+
+SessionMiddleware
+~~~~~~~~~~~~~~~~~
+
+Share data within a request life cycle — useful where the request is not
+reachable, such as a model. The session is created per thread and cleared
+when the request finishes, even if the view raises.
+
+.. code:: python
+
+    # settings.py
+    MIDDLEWARE = [
+        ...,
+        'django_rest_framework_mango.middlewares.SessionMiddleware',
+    ]
+
+.. code:: python
+
+    class ViewSet(QuerysetMixin, viewsets.GenericViewSet):
         queryset = Model.objects.all()
         serializer_class = ModelSerializer
 
         def list_queryset(self, queryset):
-            session = SessionMiddleware.get_session()
-            session['current_user'] = self.request.user
+            SessionMiddleware.get_session()['current_user'] = self.request.user
 
             return queryset
 
-    class Model(DjangoModel):
+    class Model(models.Model):
 
         @property
         def current_user(self):
-            session = SessionMiddleware.get_session()
-            session['current_user'] = self.request.user
+            # the model cannot reach the request, so it reads what the view stored
+            session = SessionMiddleware.get_session() or {}
 
-            return session['current_user']
+            return session.get('current_user')
 
+Development
+-----------
 
+Tests run against every supported Python and Django combination through
+`tox <https://tox.wiki/>`__. ``tox-uv`` downloads the interpreters, so
+none of them need to be installed beforehand.
+
+.. code:: bash
+
+    uvx --with tox-uv tox                # every combination
+    uvx --with tox-uv tox -f py314       # Python 3.14 x Django 5.2, 6.0
+    uvx --with tox-uv tox -e py312-dj60  # a single combination
+    uvx --with tox-uv tox -e mypy        # type check
+
+    uv run --python 3.14 pytest          # quick single run, without tox

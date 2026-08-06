@@ -103,6 +103,8 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+# uv — this is a library, so the lock file is not committed
+uv.lock
 
 #ide
 .idea
