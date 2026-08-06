@@ -24,6 +24,17 @@ Installation
 Usage
 -----
 
+.. code:: python
+
+    from django_rest_framework_mango.middlewares import SessionMiddleware
+    from django_rest_framework_mango.mixins import (
+        ActionMixin,
+        MangoMixin,
+        PermissionMixin,
+        QuerysetMixin,
+        SerializerMixin,
+    )
+
 ActionMixin
 ~~~~~~~~~~~
 
