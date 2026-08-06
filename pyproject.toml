@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "djangorestframework-mango"
+version = "0.3.0"
+description = "A set of viewset mixins for the Django REST Framework."
+readme = { file = "README.rst", content-type = "text/x-rst" }
+requires-python = ">=3.10"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Jun Young Lee", email = "legshort@gmail.com" }]
+keywords = ["djangorestframework", "drf", "util", "viewset"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Internet :: WWW/HTTP",
+    "Typing :: Typed",
+]
+dependencies = ["django>=5.2", "djangorestframework>=3.16"]
+
+[project.urls]
+Homepage = "https://github.com/legshort/django-rest-framework-mango/"
+Source = "https://github.com/legshort/django-rest-framework-mango/"
+Issues = "https://github.com/legshort/django-rest-framework-mango/issues"
+
+[dependency-groups]
+# ponytail: the django cap is dev-only on purpose. DRF 3.17.2 breaks on Django 6.1
+# (cc_delim_re removal, fixed on DRF main but unreleased). Capping it in [project]
+# would force users to downgrade Django even after DRF ships the fix. Drop this
+# line and add dj61 to tox.ini once DRF releases Django 6.1 support.
+dev = ["pytest", "mypy", "djangorestframework-stubs", "django<6.1"]
+
+[tool.setuptools]
+packages = ["django_rest_framework_mango"]
+package-data = { django_rest_framework_mango = ["py.typed"] }
+
+[tool.mypy]
+strict = true
+files = ["django_rest_framework_mango"]
